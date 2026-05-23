@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a1f44" />
+<title>Panini WC 2026 — Missing Stickers</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='52'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E"/>
+<style>
+  :root {
+    --bg: #0a1f44;
+    --bg-2: #0e2a5c;
+    --card: #ffffff;
+    --card-2: #f6f8fc;
+    --ink: #0a1f44;
+    --muted: #5c6b8a;
+    --accent: #d62828;
+    --accent-2: #f77f00;
+    --gold: #ffd166;
+    --good: #06a77d;
+    --pill-bg: #eef2fb;
+    --pill-ink: #0a1f44;
+    --pill-border: #d6deec;
+    --shadow: 0 8px 24px rgba(10,31,68,.10);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --card: #11224a;
+      --card-2: #0e1d40;
+      --ink: #eaf0ff;
+      --muted: #98a7c6;
+      --pill-bg: #15295a;
+      --pill-ink: #eaf0ff;
+      --pill-border: #25386b;
+      --shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 100%);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(180deg, rgba(10,31,68,.95), rgba(10,31,68,.85));
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    color: #fff;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .title-row { display: flex; align-items: center; gap: 10px; }
+  .title-row h1 {
+    font-size: 17px; margin: 0; font-weight: 700; letter-spacing: .2px; flex: 1;
+  }
+  .title-row .ball { font-size: 22px; }
+  .progress-wrap {
+    margin-top: 10px; height: 8px; background: rgba(255,255,255,.12);
+    border-radius: 999px; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--gold));
+    transition: width .35s ease;
+  }
+  .stats {
+    display: flex; gap: 12px; font-size: 12.5px; color: #cfd8ee;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  .stats b { color: #fff; font-weight: 700; }
+  .toolbar {
+    display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .seg {
+    display: inline-flex; background: rgba(255,255,255,.10);
+    border-radius: 999px; padding: 3px; gap: 2px;
+  }
+  .seg button {
+    border: 0; background: transparent; color: #cfd8ee;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .seg button.active { background: #fff; color: var(--ink); }
+  .icon-btn {
+    border: 0; background: rgba(255,255,255,.10); color: #fff;
+    padding: 6px 10px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .icon-btn:active { transform: scale(.97); }
+  input.search {
+    flex: 1; min-width: 120px;
+    border: 0; outline: 0; background: rgba(255,255,255,.10); color: #fff;
+    padding: 7px 12px; border-radius: 999px;
+    font-size: 13px;
+  }
+  input.search::placeholder { color: #b9c4dd; }
+
+  main { padding: 14px 12px 80px; max-width: 760px; margin: 0 auto; }
+
+  .team {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .team-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    cursor: pointer; user-select: none;
+    background: linear-gradient(180deg, var(--card), var(--card-2));
+  }
+  .team-code {
+    font-weight: 800; letter-spacing: .6px; font-size: 15px;
+    color: var(--ink);
+  }
+  .team-progress {
+    flex: 1; height: 6px; background: var(--pill-bg); border-radius: 999px; overflow: hidden;
+  }
+  .team-progress > span {
+    display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--good), #2bb673);
+    transition: width .3s ease;
+  }
+  .team-count {
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px; color: var(--muted); font-weight: 600; min-width: 46px; text-align: right;
+  }
+  .chevron {
+    width: 16px; height: 16px; color: var(--muted);
+    transition: transform .2s ease;
+  }
+  .team.collapsed .chevron { transform: rotate(-90deg); }
+  .team.collapsed .pills { display: none; }
+  .team.done .team-code::after {
+    content: " ✓"; color: var(--good);
+  }
+
+  .pills {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 4px 14px 14px;
+  }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; height: 38px; padding: 0 12px;
+    border-radius: 999px;
+    background: var(--pill-bg); color: var(--pill-ink);
+    border: 1px solid var(--pill-border);
+    font-weight: 700; font-size: 14px;
+    cursor: pointer; user-select: none;
+    transition: transform .15s ease, opacity .25s ease, background .2s ease, color .2s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill:active { transform: scale(.92); }
+  .pill.got {
+    background: var(--good); color: #fff; border-color: var(--good);
+    text-decoration: line-through; text-decoration-thickness: 2px;
+  }
+  .pill.removing { opacity: 0; transform: scale(.6); }
+
+  /* When filter = missing, hide got pills (and empty teams) */
+  body[data-filter="missing"] .pill.got { display: none; }
+  body[data-filter="missing"] .team.done { display: none; }
+  body[data-filter="got"] .pill:not(.got) { display: none; }
+  body[data-filter="got"] .team.empty-got { display: none; }
+
+  .empty-state {
+    text-align: center; color: #cfd8ee; padding: 60px 24px;
+    font-size: 14px;
+  }
+  .empty-state .big { font-size: 48px; margin-bottom: 10px; }
+
+  /* footer / modal */
+  dialog {
+    border: 0; border-radius: 16px; padding: 18px;
+    background: var(--card); color: var(--ink);
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    max-width: 92vw; width: 420px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog h3 { margin: 0 0 8px; font-size: 16px; }
+  dialog p { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  dialog textarea {
+    width: 100%; min-height: 140px; border-radius: 10px;
+    border: 1px solid var(--pill-border); padding: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; background: var(--card-2); color: var(--ink);
+  }
+  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  dialog button {
+    border: 0; padding: 8px 14px; border-radius: 10px; font-weight: 600;
+    background: var(--pill-bg); color: var(--ink); cursor: pointer;
+  }
+  dialog button.primary { background: var(--ink); color: #fff; }
+  dialog button.danger { background: var(--accent); color: #fff; }
+
+  .footnote {
+    text-align: center; color: #cfd8ee; font-size: 11.5px; padding: 8px 14px 4px;
+  }
+  a { color: var(--gold); }
+</style>
+</head>
+<body data-filter="missing">
+<header>
+  <div class="title-row">
+    <span class="ball">⚽</span>
+    <h1>Panini WC 2026 — Missing</h1>
+    <button class="icon-btn" id="menuBtn" title="Menu">⋯</button>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="stats">
+    <span><b id="gotCount">0</b> got</span>
+    <span><b id="missingCount">0</b> missing</span>
+    <span><b id="totalCount">0</b> total</span>
+    <span><b id="percent">0%</b> complete</span>
+  </div>
+  <div class="toolbar">
+    <div class="seg" role="tablist">
+      <button data-filter="missing" class="active">Missing</button>
+      <button data-filter="got">Got</button>
+      <button data-filter="all">All</button>
+    </div>
+    <input class="search" id="search" placeholder="Filter teams (e.g. BRA)" autocomplete="off" autocapitalize="characters"/>
+  </div>
+</header>
+
+<main id="app"></main>
+<p class="footnote">Tap a number to mark it as got. Data is stored only on this device.</p>
+
+<dialog id="menuDlg">
+  <h3>Menu</h3>
+  <p>Backup or restore your progress. Import accepts the JSON exported below.</p>
+  <textarea id="ioBox" placeholder="Paste exported JSON here to import…"></textarea>
+  <div class="row">
+    <button id="exportBtn">Copy export</button>
+    <button id="importBtn" class="primary">Import</button>
+    <button id="resetBtn" class="danger">Reset all</button>
+    <button id="closeBtn">Close</button>
+  </div>
+</dialog>
+
+<script>
+const DATA = {
+  FWC:[1,2,7,8,9],
+  MEX:[5,9,11,12,17,19],
+  RSA:[2,5,6,7,9,11],
+  KOR:[3,12,14,15],
+  CZE:[3,4,5,7,14,16,18,20],
+  BRA:[2,7,9,20],
+  MAR:[12,14,16,17,18,20],
+  HAI:[3,5,6,10,13,17],
+  SCO:[9,10,16],
+  GER:[17,18,19],
+  CUW:[3,5,10,12,19,20],
+  CIV:[9,13,15,16],
+  ECU:[3,4,5,13,14,19],
+  BEL:[6,7,11,16],
+  EGY:[4,8,11,13,16,17,18],
+  IRN:[7,13,19,20],
+  NZL:[1,4,5,14,17,18],
+  FRA:[2,5,6,9,11,13,18],
+  SEN:[1,2,7,8,9,12,19],
+  IRQ:[3,4,9,11,14,15],
+  NOR:[4,9,11,17],
+  POR:[5,6,7,10,12,13,20],
+  COD:[1,8,9,11,17],
+  UZB:[10,16,19],
+  COL:[1,3,5,8,15,20],
+  CAN:[2,4,5,7,10,11,12,17,18],
+  BIH:[6,8,9,12,20],
+  QAT:[1,4],
+  SUI:[7,10,11],
+  USA:[7,13,15,20],
+  PAR:[3,8,13,19,20],
+  AUS:[4,5,8,11,12,13,17],
+  TUR:[4,8,13,14,16,20],
+  NED:[3,8,11,15],
+  JPN:[19],
+  SWE:[2,3,4,7,10,20],
+  TUN:[7,8,15],
+  ESP:[9,17,20],
+  CPV:[5,6,11,12],
+  KSA:[11,17],
+  URU:[6,11,16,18],
+  ARG:[1,2,6,8,17],
+  ALG:[5,8,15,16,19,20],
+  AUT:[7,14,18,19],
+  JOR:[6,9,18,20],
+  ENG:[3,9,10,11,13,15],
+  CRO:[2,3,7,10,16,17,19],
+  GHA:[5,10,13,14],
+  PAN:[3,5,7,11,12,14,18]
+};
+
+const STORAGE_KEY = "panini-wc2026-v1";
+
+function loadGot() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch { return {}; }
+}
+function saveGot(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let got = loadGot();
+
+function isGot(team, num) {
+  return !!(got[team] && got[team][num]);
+}
+function setGot(team, num, value) {
+  if (!got[team]) got[team] = {};
+  if (value) got[team][num] = 1;
+  else delete got[team][num];
+  if (got[team] && Object.keys(got[team]).length === 0) delete got[team];
+  saveGot(got);
+}
+
+function totals() {
+  let total = 0, gotN = 0;
+  for (const team of Object.keys(DATA)) {
+    for (const n of DATA[team]) {
+      total++;
+      if (isGot(team, n)) gotN++;
+    }
+  }
+  return { total, got: gotN, missing: total - gotN };
+}
+
+function teamTotals(team) {
+  const nums = DATA[team];
+  let g = 0;
+  for (const n of nums) if (isGot(team, n)) g++;
+  return { total: nums.length, got: g, missing: nums.length - g };
+}
+
+function updateStats() {
+  const t = totals();
+  document.getElementById("gotCount").textContent = t.got;
+  document.getElementById("missingCount").textContent = t.missing;
+  document.getElementById("totalCount").textContent = t.total;
+  const pct = t.total ? Math.round((t.got / t.total) * 100) : 0;
+  document.getElementById("percent").textContent = pct + "%";
+  document.getElementById("progressBar").style.width = pct + "%";
+}
+
+function updateTeamCard(team) {
+  const el = document.querySelector(`.team[data-team="${team}"]`);
+  if (!el) return;
+  const tt = teamTotals(team);
+  el.querySelector(".team-count").textContent = `${tt.got}/${tt.total}`;
+  el.querySelector(".team-progress > span").style.width = (tt.total ? (tt.got/tt.total*100) : 0) + "%";
+  el.classList.toggle("done", tt.missing === 0);
+  el.classList.toggle("empty-got", tt.got === 0);
+}
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const team of Object.keys(DATA)) {
+    const nums = DATA[team];
+    const tt = teamTotals(team);
+    const card = document.createElement("section");
+    card.className = "team";
+    card.dataset.team = team;
+    if (tt.missing === 0) card.classList.add("done");
+    if (tt.got === 0) card.classList.add("empty-got");
+
+    const head = document.createElement("div");
+    head.className = "team-head";
+    head.innerHTML = `
+      <div class="team-code">${team}</div>
+      <div class="team-progress"><span style="width:${tt.total ? (tt.got/tt.total*100) : 0}%"></span></div>
+      <div class="team-count">${tt.got}/${tt.total}</div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    `;
+    head.addEventListener("click", () => card.classList.toggle("collapsed"));
+    card.appendChild(head);
+
+    const pills = document.createElement("div");
+    pills.className = "pills";
+    for (const n of nums) {
+      const b = document.createElement("button");
+      b.className = "pill" + (isGot(team, n) ? " got" : "");
+      b.type = "button";
+      b.textContent = "#" + n;
+      b.dataset.team = team;
+      b.dataset.num = n;
+      b.addEventListener("click", onPillClick);
+      pills.appendChild(b);
+    }
+    card.appendChild(pills);
+    frag.appendChild(card);
+  }
+  app.appendChild(frag);
+  updateStats();
+  applySearch();
+}
+
+function onPillClick(e) {
+  const el = e.currentTarget;
+  const team = el.dataset.team;
+  const num = parseInt(el.dataset.num, 10);
+  const currentlyGot = el.classList.contains("got");
+  const filter = document.body.dataset.filter;
+
+  if (!currentlyGot) {
+    // marking as got
+    setGot(team, num, true);
+    if (filter === "missing") {
+      el.classList.add("removing");
+      setTimeout(() => {
+        el.classList.add("got");
+        el.classList.remove("removing");
+        updateTeamCard(team);
+        updateStats();
+      }, 220);
+    } else {
+      el.classList.add("got");
+      updateTeamCard(team);
+      updateStats();
+    }
+  } else {
+    // un-mark
+    setGot(team, num, false);
+    el.classList.remove("got");
+    updateTeamCard(team);
+    updateStats();
+  }
+}
+
+// Filter tabs
+document.querySelectorAll(".seg button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("active", b === btn));
+    document.body.dataset.filter = btn.dataset.filter;
+  });
+});
+
+// Search
+const searchEl = document.getElementById("search");
+searchEl.addEventListener("input", applySearch);
+function applySearch() {
+  const q = searchEl.value.trim().toUpperCase();
+  document.querySelectorAll(".team").forEach(t => {
+    if (!q) { t.style.display = ""; return; }
+    t.style.display = t.dataset.team.startsWith(q) ? "" : "none";
+  });
+}
+
+// Menu / export / import / reset
+const dlg = document.getElementById("menuDlg");
+document.getElementById("menuBtn").addEventListener("click", () => {
+  document.getElementById("ioBox").value = "";
+  dlg.showModal();
+});
+document.getElementById("closeBtn").addEventListener("click", () => dlg.close());
+document.getElementById("exportBtn").addEventListener("click", async () => {
+  const payload = { v: 1, exportedAt: new Date().toISOString(), got };
+  const text = JSON.stringify(payload);
+  document.getElementById("ioBox").value = text;
+  try { await navigator.clipboard.writeText(text); alert("Copied to clipboard."); }
+  catch { /* textarea has it */ }
+});
+document.getElementById("importBtn").addEventListener("click", () => {
+  const text = document.getElementById("ioBox").value.trim();
+  if (!text) { alert("Paste exported JSON first."); return; }
+  try {
+    const data = JSON.parse(text);
+    if (!data || typeof data !== "object" || !data.got) throw new Error("invalid");
+    got = data.got;
+    saveGot(got);
+    render();
+    dlg.close();
+  } catch (e) { alert("Could not parse JSON."); }
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Reset all progress?")) return;
+  got = {};
+  saveGot(got);
+  render();
+  dlg.close();
+});
+
+render();
+</script>
+</body>
+</html>
