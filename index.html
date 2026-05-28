@@ -307,6 +307,8 @@ function saveGot(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+const TEAMS = Object.keys(DATA).sort();
+
 let got = loadGot();
 
 function isGot(team, num) {
@@ -322,7 +324,7 @@ function setGot(team, num, value) {
 
 function totals() {
   let total = 0, gotN = 0;
-  for (const team of Object.keys(DATA)) {
+  for (const team of TEAMS) {
     for (const n of DATA[team]) {
       total++;
       if (isGot(team, n)) gotN++;
@@ -362,7 +364,7 @@ function render() {
   const app = document.getElementById("app");
   app.innerHTML = "";
   const frag = document.createDocumentFragment();
-  for (const team of Object.keys(DATA)) {
+  for (const team of TEAMS) {
     const nums = DATA[team];
     const tt = teamTotals(team);
     const card = document.createElement("section");
