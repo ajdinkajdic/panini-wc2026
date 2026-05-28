@@ -70,9 +70,19 @@
   }
   .stats {
     display: flex; gap: 12px; font-size: 12.5px; color: #cfd8ee;
-    margin-top: 8px; flex-wrap: wrap;
+    margin-top: 8px; flex-wrap: wrap; align-items: center;
   }
   .stats b { color: #fff; font-weight: 700; }
+  .sync-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; padding: 3px 9px; border-radius: 999px;
+    background: rgba(255,255,255,.10); color: #cfd8ee; font-weight: 600;
+    cursor: pointer; user-select: none;
+    border: 1px solid transparent;
+  }
+  .sync-badge.ok { background: rgba(6,167,125,.18); color: #9fefcb; border-color: rgba(6,167,125,.35); }
+  .sync-badge.syncing { background: rgba(255,209,102,.16); color: #ffe49a; border-color: rgba(255,209,102,.35); }
+  .sync-badge.auth, .sync-badge.error { background: rgba(214,40,40,.18); color: #ffb3b3; border-color: rgba(214,40,40,.35); }
   .toolbar {
     display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
   }
@@ -161,45 +171,46 @@
   }
   .pill.removing { opacity: 0; transform: scale(.6); }
 
-  /* When filter = missing, hide got pills (and empty teams) */
   body[data-filter="missing"] .pill.got { display: none; }
   body[data-filter="missing"] .team.done { display: none; }
   body[data-filter="got"] .pill:not(.got) { display: none; }
   body[data-filter="got"] .team.empty-got { display: none; }
 
-  .empty-state {
-    text-align: center; color: #cfd8ee; padding: 60px 24px;
-    font-size: 14px;
-  }
-  .empty-state .big { font-size: 48px; margin-bottom: 10px; }
-
-  /* footer / modal */
   dialog {
-    border: 0; border-radius: 16px; padding: 18px;
+    border: 0; border-radius: 16px; padding: 0;
     background: var(--card); color: var(--ink);
     box-shadow: 0 20px 60px rgba(0,0,0,.3);
-    max-width: 92vw; width: 420px;
+    max-width: 92vw; width: 460px;
   }
   dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog .dlg-body { padding: 18px; max-height: 80vh; overflow-y: auto; }
   dialog h3 { margin: 0 0 8px; font-size: 16px; }
-  dialog p { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
-  dialog textarea {
-    width: 100%; min-height: 140px; border-radius: 10px;
-    border: 1px solid var(--pill-border); padding: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  dialog h4 { margin: 18px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  dialog h4:first-of-type { margin-top: 0; }
+  dialog p, dialog label { color: var(--muted); font-size: 13px; margin: 0 0 8px; display: block; }
+  dialog input[type=password], dialog input[type=text], dialog textarea {
+    width: 100%; border-radius: 10px;
+    border: 1px solid var(--pill-border); padding: 9px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px; background: var(--card-2); color: var(--ink);
+    margin-bottom: 8px;
   }
-  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  dialog textarea { min-height: 110px; }
+  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
   dialog button {
     border: 0; padding: 8px 14px; border-radius: 10px; font-weight: 600;
     background: var(--pill-bg); color: var(--ink); cursor: pointer;
+    font-size: 13px;
   }
   dialog button.primary { background: var(--ink); color: #fff; }
   dialog button.danger { background: var(--accent); color: #fff; }
+  dialog .helper { font-size: 12px; color: var(--muted); }
+  dialog .helper a { color: var(--accent); }
+  dialog .sync-status { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 
   .footnote {
     text-align: center; color: #cfd8ee; font-size: 11.5px; padding: 8px 14px 4px;
   }
-  a { color: var(--gold); }
 </style>
 </head>
 <body data-filter="missing">
@@ -215,6 +226,7 @@
     <span><b id="missingCount">0</b> missing</span>
     <span><b id="totalCount">0</b> total</span>
     <span><b id="percent">0%</b> complete</span>
+    <span class="sync-badge off" id="syncBadge" title="Sync status — tap to open settings">☁ Sync off</span>
   </div>
   <div class="toolbar">
     <div class="seg" role="tablist">
@@ -227,99 +239,163 @@
 </header>
 
 <main id="app"></main>
-<p class="footnote">Tap a number to mark it as got. Data is stored only on this device.</p>
+<p class="footnote">Tap a number to mark it as got. Set up sync to share progress across devices.</p>
 
 <dialog id="menuDlg">
-  <h3>Menu</h3>
-  <p>Backup or restore your progress. Import accepts the JSON exported below.</p>
-  <textarea id="ioBox" placeholder="Paste exported JSON here to import…"></textarea>
-  <div class="row">
-    <button id="exportBtn">Copy export</button>
-    <button id="importBtn" class="primary">Import</button>
-    <button id="resetBtn" class="danger">Reset all</button>
-    <button id="closeBtn">Close</button>
+  <div class="dlg-body">
+    <h3>Menu</h3>
+
+    <h4>☁ Sync (GitHub Gist)</h4>
+    <p class="sync-status" id="syncStatusLine">Not configured.</p>
+    <label for="tokenInput">Personal access token (fine-grained, "Gists: read and write")</label>
+    <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" spellcheck="false"/>
+    <p class="helper">Create one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">github.com/settings/personal-access-tokens/new</a>. Account permissions → <b>Gists: Read and write</b>. Repository access: <b>Public Repositories</b> is fine. The token is stored only in this browser's localStorage. Anyone with this device can use it — keep it scoped to gists only.</p>
+    <div class="row">
+      <button id="syncNowBtn">Sync now</button>
+      <button id="disconnectBtn">Disconnect</button>
+      <button id="saveTokenBtn" class="primary">Save token &amp; sync</button>
+    </div>
+
+    <h4>📋 Manual backup</h4>
+    <p>Export a JSON snapshot of your progress to back up or move to a browser that can't run sync.</p>
+    <textarea id="ioBox" placeholder="Paste exported JSON here to import…"></textarea>
+    <div class="row">
+      <button id="exportBtn">Copy export</button>
+      <button id="importBtn">Import</button>
+    </div>
+
+    <h4>⚠️ Danger zone</h4>
+    <div class="row">
+      <button id="resetBtn" class="danger">Reset local progress</button>
+      <button id="closeBtn">Close</button>
+    </div>
   </div>
 </dialog>
 
 <script>
+"use strict";
+
 const DATA = {
-  FWC:[1,2,7,8,9],
-  MEX:[5,9,11,12,17,19],
-  RSA:[2,5,6,7,9,11],
-  KOR:[3,12,14,15],
-  CZE:[3,4,5,7,14,16,18,20],
-  BRA:[2,7,9,20],
-  MAR:[12,14,16,17,18,20],
-  HAI:[3,5,6,10,13,17],
-  SCO:[9,10,16],
-  GER:[17,18,19],
-  CUW:[3,5,10,12,19,20],
-  CIV:[9,13,15,16],
-  ECU:[3,4,5,13,14,19],
-  BEL:[6,7,11,16],
-  EGY:[4,8,11,13,16,17,18],
-  IRN:[7,13,19,20],
-  NZL:[1,4,5,14,17,18],
-  FRA:[2,5,6,9,11,13,18],
-  SEN:[1,2,7,8,9,12,19],
-  IRQ:[3,4,9,11,14,15],
-  NOR:[4,9,11,17],
-  POR:[5,6,7,10,12,13,20],
-  COD:[1,8,9,11,17],
-  UZB:[10,16,19],
-  COL:[1,3,5,8,15,20],
-  CAN:[2,4,5,7,10,11,12,17,18],
-  BIH:[6,8,9,12,20],
-  QAT:[1,4],
-  SUI:[7,10,11],
-  USA:[7,13,15,20],
-  PAR:[3,8,13,19,20],
+  ALG:[5,8,15,16,19,20],
+  ARG:[1,2,6,8,17],
   AUS:[4,5,8,11,12,13,17],
-  TUR:[4,8,13,14,16,20],
-  NED:[3,8,11,15],
+  AUT:[7,14,18,19],
+  BEL:[6,7,11,16],
+  BIH:[6,8,9,12,20],
+  BRA:[2,7,9,20],
+  CAN:[2,4,5,7,10,11,12,17,18],
+  CIV:[9,13,15,16],
+  COD:[1,8,9,11,17],
+  COL:[1,3,5,8,15,20],
+  CPV:[5,6,11,12],
+  CRO:[2,3,7,10,16,17,19],
+  CUW:[3,5,10,12,19,20],
+  CZE:[3,4,5,7,14,16,18,20],
+  ECU:[3,4,5,13,14,19],
+  EGY:[4,8,11,13,16,17,18],
+  ENG:[3,9,10,11,13,15],
+  ESP:[9,17,20],
+  FRA:[2,5,6,9,11,13,18],
+  FWC:[1,2,7,8,9],
+  GER:[17,18,19],
+  GHA:[5,10,13,14],
+  HAI:[3,5,6,10,13,17],
+  IRN:[7,13,19,20],
+  IRQ:[3,4,9,11,14,15],
+  JOR:[6,9,18,20],
   JPN:[19],
+  KOR:[3,12,14,15],
+  KSA:[11,17],
+  MAR:[12,14,16,17,18,20],
+  MEX:[5,9,11,12,17,19],
+  NED:[3,8,11,15],
+  NOR:[4,9,11,17],
+  NZL:[1,4,5,14,17,18],
+  PAN:[3,5,7,11,12,14,18],
+  PAR:[3,8,13,19,20],
+  POR:[5,6,7,10,12,13,20],
+  QAT:[1,4],
+  RSA:[2,5,6,7,9,11],
+  SCO:[9,10,16],
+  SEN:[1,2,7,8,9,12,19],
+  SUI:[7,10,11],
   SWE:[2,3,4,7,10,20],
   TUN:[7,8,15],
-  ESP:[9,17,20],
-  CPV:[5,6,11,12],
-  KSA:[11,17],
+  TUR:[4,8,13,14,16,20],
   URU:[6,11,16,18],
-  ARG:[1,2,6,8,17],
-  ALG:[5,8,15,16,19,20],
-  AUT:[7,14,18,19],
-  JOR:[6,9,18,20],
-  ENG:[3,9,10,11,13,15],
-  CRO:[2,3,7,10,16,17,19],
-  GHA:[5,10,13,14],
-  PAN:[3,5,7,11,12,14,18]
+  USA:[7,13,15,20],
+  UZB:[10,16,19]
 };
+const TEAMS = Object.keys(DATA).sort();
 
-const STORAGE_KEY = "panini-wc2026-v1";
+// ====================== State (v2: timestamps) ======================
+// got[TEAM][NUM] = ts ;  ts > 0 -> got at ts ;  ts < 0 -> explicitly un-got at |ts| ;  missing key -> never touched
+const STORAGE_KEY_V2 = "panini-wc2026-v2";
+const STORAGE_KEY_V1 = "panini-wc2026-v1";
+const DEVICE_KEY = "panini-wc2026-device-id";
+
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+function v1ToV2(v1) {
+  const out = {};
+  if (!v1 || typeof v1 !== "object") return out;
+  for (const team of Object.keys(v1)) {
+    const m = v1[team];
+    if (!m || typeof m !== "object") continue;
+    out[team] = {};
+    for (const k of Object.keys(m)) {
+      const n = Number(k);
+      if (!Number.isFinite(n)) continue;
+      out[team][n] = 1; // fixed tiny positive ts so new actions on any device win
+    }
+  }
+  return out;
+}
 
 function loadGot() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch { return {}; }
-}
-function saveGot(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const raw = localStorage.getItem(STORAGE_KEY_V2);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch {}
+  try {
+    const raw1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (raw1) {
+      const v1 = JSON.parse(raw1);
+      const migrated = v1ToV2(v1);
+      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(migrated));
+      localStorage.removeItem(STORAGE_KEY_V1);
+      return migrated;
+    }
+  } catch {}
+  return {};
 }
 
-const TEAMS = Object.keys(DATA).sort();
+function saveGot(state) {
+  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(state));
+}
 
 let got = loadGot();
 
 function isGot(team, num) {
-  return !!(got[team] && got[team][num]);
+  return !!(got[team] && (got[team][num] || 0) > 0);
 }
 function setGot(team, num, value) {
   if (!got[team]) got[team] = {};
-  if (value) got[team][num] = 1;
-  else delete got[team][num];
-  if (got[team] && Object.keys(got[team]).length === 0) delete got[team];
+  const ts = Date.now();
+  got[team][num] = value ? ts : -ts;
   saveGot(got);
+  schedulePush();
 }
 
 function totals() {
@@ -332,7 +408,6 @@ function totals() {
   }
   return { total, got: gotN, missing: total - gotN };
 }
-
 function teamTotals(team) {
   const nums = DATA[team];
   let g = 0;
@@ -340,6 +415,7 @@ function teamTotals(team) {
   return { total: nums.length, got: g, missing: nums.length - g };
 }
 
+// ====================== Rendering ======================
 function updateStats() {
   const t = totals();
   document.getElementById("gotCount").textContent = t.got;
@@ -404,6 +480,16 @@ function render() {
   applySearch();
 }
 
+function refreshAllPills() {
+  document.querySelectorAll(".pill").forEach(p => {
+    const team = p.dataset.team;
+    const num = parseInt(p.dataset.num, 10);
+    p.classList.toggle("got", isGot(team, num));
+  });
+  for (const team of TEAMS) updateTeamCard(team);
+  updateStats();
+}
+
 function onPillClick(e) {
   const el = e.currentTarget;
   const team = el.dataset.team;
@@ -412,7 +498,6 @@ function onPillClick(e) {
   const filter = document.body.dataset.filter;
 
   if (!currentlyGot) {
-    // marking as got
     setGot(team, num, true);
     if (filter === "missing") {
       el.classList.add("removing");
@@ -428,7 +513,6 @@ function onPillClick(e) {
       updateStats();
     }
   } else {
-    // un-mark
     setGot(team, num, false);
     el.classList.remove("got");
     updateTeamCard(team);
@@ -436,7 +520,6 @@ function onPillClick(e) {
   }
 }
 
-// Filter tabs
 document.querySelectorAll(".seg button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("active", b === btn));
@@ -444,7 +527,6 @@ document.querySelectorAll(".seg button").forEach(btn => {
   });
 });
 
-// Search
 const searchEl = document.getElementById("search");
 searchEl.addEventListener("input", applySearch);
 function applySearch() {
@@ -455,41 +537,346 @@ function applySearch() {
   });
 }
 
-// Menu / export / import / reset
+// ====================== Manual export / import / reset ======================
 const dlg = document.getElementById("menuDlg");
-document.getElementById("menuBtn").addEventListener("click", () => {
+document.getElementById("menuBtn").addEventListener("click", openMenu);
+document.getElementById("syncBadge").addEventListener("click", openMenu);
+function openMenu() {
   document.getElementById("ioBox").value = "";
+  const tok = localStorage.getItem(SYNC_TOKEN_KEY);
+  document.getElementById("tokenInput").value = tok ? "••••••••••••••••" : "";
+  updateSyncStatusLine();
   dlg.showModal();
-});
+}
 document.getElementById("closeBtn").addEventListener("click", () => dlg.close());
 document.getElementById("exportBtn").addEventListener("click", async () => {
-  const payload = { v: 1, exportedAt: new Date().toISOString(), got };
+  const payload = { v: 2, exportedAt: new Date().toISOString(), state: got };
   const text = JSON.stringify(payload);
   document.getElementById("ioBox").value = text;
-  try { await navigator.clipboard.writeText(text); alert("Copied to clipboard."); }
-  catch { /* textarea has it */ }
+  try { await navigator.clipboard.writeText(text); alert("Copied to clipboard."); } catch { /* textarea has it */ }
 });
 document.getElementById("importBtn").addEventListener("click", () => {
   const text = document.getElementById("ioBox").value.trim();
   if (!text) { alert("Paste exported JSON first."); return; }
-  try {
-    const data = JSON.parse(text);
-    if (!data || typeof data !== "object" || !data.got) throw new Error("invalid");
-    got = data.got;
-    saveGot(got);
-    render();
-    dlg.close();
-  } catch (e) { alert("Could not parse JSON."); }
+  const parsed = parseRemotePayload(text);
+  if (!parsed) { alert("Could not parse JSON."); return; }
+  got = mergeStates(got, parsed);
+  saveGot(got);
+  refreshAllPills();
+  schedulePush();
+  dlg.close();
 });
 document.getElementById("resetBtn").addEventListener("click", () => {
-  if (!confirm("Reset all progress?")) return;
+  if (!confirm("Reset local progress?\n\nThis clears your ticks on THIS device. If sync is connected, the empty state will overwrite the cloud copy after merge — your other devices will keep their ticks (those are positive timestamps and beat 'never touched').\n\nTo wipe everything everywhere, do this on every device or delete the gist.")) return;
   got = {};
   saveGot(got);
-  render();
+  refreshAllPills();
+  schedulePush();
   dlg.close();
 });
 
+// ====================== Sync engine (Gist) ======================
+const SYNC_TOKEN_KEY = "panini-wc2026-sync-token";
+const SYNC_GIST_KEY = "panini-wc2026-sync-gist-id";
+const GIST_FILENAME = "panini-wc2026-progress.json";
+const GIST_DESC = "Panini WC 2026 sticker tracker progress";
+const PUSH_DEBOUNCE_MS = 1200;
+const PULL_THROTTLE_MS = 30000;
+
+const syncRuntime = {
+  status: "off",       // off | syncing | ok | auth | error
+  lastSyncedAt: 0,
+  lastPullAt: 0,
+  pushTimer: null,
+  inFlight: null,
+  pendingAgain: false,
+  lastPushedSerialized: null,
+};
+
+class AuthError extends Error { constructor(msg) { super(msg || "auth"); this.name = "AuthError"; } }
+
+function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY); }
+function isSyncConfigured() { return !!getToken(); }
+
+async function gistApi(path, opts) {
+  const token = getToken();
+  if (!token) throw new AuthError("no token");
+  const headers = Object.assign({
+    "Accept": "application/vnd.github+json",
+    "Authorization": "Bearer " + token,
+    "X-GitHub-Api-Version": "2022-11-28",
+  }, (opts && opts.headers) || {});
+  if (opts && opts.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const r = await fetch("https://api.github.com" + path, Object.assign({}, opts, { headers }));
+  if (r.status === 401 || r.status === 403) throw new AuthError("auth " + r.status);
+  return r;
+}
+
+function parseRemotePayload(text) {
+  if (!text) return null;
+  try {
+    const obj = JSON.parse(text);
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.v === 1 && obj.got && typeof obj.got === "object") return v1ToV2(obj.got);
+    if (obj.v === 2 && obj.state && typeof obj.state === "object") {
+      const clean = {};
+      for (const team of Object.keys(obj.state)) {
+        const m = obj.state[team];
+        if (!m || typeof m !== "object") continue;
+        const out = {};
+        for (const k of Object.keys(m)) {
+          const n = Number(k);
+          const ts = Number(m[k]);
+          if (!Number.isFinite(n) || !Number.isFinite(ts)) continue;
+          out[n] = ts;
+        }
+        if (Object.keys(out).length) clean[team] = out;
+      }
+      return clean;
+    }
+  } catch {}
+  return null;
+}
+
+function mergeStates(a, b) {
+  const merged = {};
+  const teams = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  for (const t of teams) {
+    const ma = (a && a[t]) || {};
+    const mb = (b && b[t]) || {};
+    const nums = new Set([...Object.keys(ma), ...Object.keys(mb)]);
+    const out = {};
+    for (const k of nums) {
+      const av = Number(ma[k]) || 0;
+      const bv = Number(mb[k]) || 0;
+      const absA = Math.abs(av);
+      const absB = Math.abs(bv);
+      let pick;
+      if (absA > absB) pick = av;
+      else if (absB > absA) pick = bv;
+      else {
+        // deterministic tiebreak: un-got wins on equal timestamps
+        if (av < 0 || bv < 0) pick = -Math.max(absA, absB);
+        else pick = av || bv;
+      }
+      if (pick !== 0) out[k] = pick;
+    }
+    if (Object.keys(out).length) merged[t] = out;
+  }
+  return merged;
+}
+
+async function findOrCreateGist() {
+  let gistId = localStorage.getItem(SYNC_GIST_KEY);
+  if (gistId) {
+    const r = await gistApi("/gists/" + encodeURIComponent(gistId));
+    if (r.ok) return gistId;
+    if (r.status !== 404) throw new Error("get gist failed: " + r.status);
+  }
+  const list = await gistApi("/gists?per_page=100");
+  if (!list.ok) throw new Error("list gists failed: " + list.status);
+  const gists = await list.json();
+  const matching = gists
+    .filter(g => g.description === GIST_DESC || (g.files && g.files[GIST_FILENAME]))
+    .sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+  if (matching.length) {
+    gistId = matching[0].id;
+    localStorage.setItem(SYNC_GIST_KEY, gistId);
+    return gistId;
+  }
+  const initial = { v: 2, state: {}, updatedAt: Date.now(), deviceId: getDeviceId() };
+  const create = await gistApi("/gists", {
+    method: "POST",
+    body: JSON.stringify({
+      description: GIST_DESC,
+      public: false,
+      files: { [GIST_FILENAME]: { content: JSON.stringify(initial) } },
+    }),
+  });
+  if (!create.ok) throw new Error("create gist failed: " + create.status);
+  const g = await create.json();
+  // Re-list to detect simultaneous creation by another device; converge on oldest
+  try {
+    const r2 = await gistApi("/gists?per_page=100");
+    if (r2.ok) {
+      const all = await r2.json();
+      const m2 = all
+        .filter(x => x.description === GIST_DESC || (x.files && x.files[GIST_FILENAME]))
+        .sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+      if (m2.length) {
+        gistId = m2[0].id;
+      } else {
+        gistId = g.id;
+      }
+    } else {
+      gistId = g.id;
+    }
+  } catch { gistId = g.id; }
+  localStorage.setItem(SYNC_GIST_KEY, gistId);
+  return gistId;
+}
+
+async function fetchRemoteState(gistId) {
+  const r = await gistApi("/gists/" + encodeURIComponent(gistId));
+  if (!r.ok) throw new Error("get gist failed: " + r.status);
+  const g = await r.json();
+  const file = g.files && g.files[GIST_FILENAME];
+  if (!file) return null;
+  let content = file.content;
+  if (file.truncated && file.raw_url) {
+    try {
+      const raw = await fetch(file.raw_url);
+      if (raw.ok) content = await raw.text();
+    } catch {}
+  }
+  return parseRemotePayload(content);
+}
+
+function statesEqual(a, b) {
+  // structurally compare; small objects so JSON compare with sorted keys is fine
+  return canonicalJson(a) === canonicalJson(b);
+}
+function canonicalJson(obj) {
+  if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
+  if (Array.isArray(obj)) return "[" + obj.map(canonicalJson).join(",") + "]";
+  const keys = Object.keys(obj).sort();
+  return "{" + keys.map(k => JSON.stringify(k) + ":" + canonicalJson(obj[k])).join(",") + "}";
+}
+
+async function syncOnce() {
+  if (!isSyncConfigured()) return;
+  if (syncRuntime.inFlight) {
+    syncRuntime.pendingAgain = true;
+    return syncRuntime.inFlight;
+  }
+  syncRuntime.inFlight = (async () => {
+    setSyncStatus("syncing");
+    try {
+      const gistId = await findOrCreateGist();
+      const remote = await fetchRemoteState(gistId);
+      const merged = mergeStates(got, remote || {});
+      const changedLocal = !statesEqual(merged, got);
+      if (changedLocal) {
+        got = merged;
+        saveGot(got);
+        refreshAllPills();
+      }
+      const payload = { v: 2, state: got, updatedAt: Date.now(), deviceId: getDeviceId() };
+      const payloadStr = JSON.stringify(payload);
+      const remoteEqualsOurs = remote && statesEqual(remote, got);
+      if (!remoteEqualsOurs) {
+        const r = await gistApi("/gists/" + encodeURIComponent(gistId), {
+          method: "PATCH",
+          body: JSON.stringify({ files: { [GIST_FILENAME]: { content: payloadStr } } }),
+        });
+        if (!r.ok) throw new Error("patch failed: " + r.status);
+        syncRuntime.lastPushedSerialized = canonicalJson(got);
+      }
+      syncRuntime.lastSyncedAt = Date.now();
+      syncRuntime.lastPullAt = Date.now();
+      setSyncStatus("ok");
+    } catch (e) {
+      if (e instanceof AuthError) {
+        localStorage.removeItem(SYNC_TOKEN_KEY);
+        setSyncStatus("auth");
+      } else {
+        console.error("sync failed", e);
+        setSyncStatus("error");
+      }
+    } finally {
+      syncRuntime.inFlight = null;
+      if (syncRuntime.pendingAgain) {
+        syncRuntime.pendingAgain = false;
+        setTimeout(() => { syncOnce(); }, 250);
+      }
+    }
+  })();
+  return syncRuntime.inFlight;
+}
+
+function schedulePush() {
+  if (!isSyncConfigured()) return;
+  clearTimeout(syncRuntime.pushTimer);
+  syncRuntime.pushTimer = setTimeout(() => syncOnce(), PUSH_DEBOUNCE_MS);
+}
+
+function maybePullOnFocus() {
+  if (!isSyncConfigured()) return;
+  if (syncRuntime.inFlight) return;
+  const now = Date.now();
+  if (now - syncRuntime.lastPullAt < PULL_THROTTLE_MS) return;
+  syncOnce();
+}
+
+function setSyncStatus(status) {
+  syncRuntime.status = status;
+  const el = document.getElementById("syncBadge");
+  const map = {
+    off:     { txt: "☁ Sync off",      cls: "off" },
+    syncing: { txt: "☁ Syncing…",      cls: "syncing" },
+    ok:      { txt: "☁ Synced",        cls: "ok" },
+    auth:    { txt: "☁ Sign in again", cls: "auth" },
+    error:   { txt: "☁ Sync error",    cls: "error" },
+  };
+  const m = map[status] || map.off;
+  el.textContent = m.txt;
+  el.className = "sync-badge " + m.cls;
+  updateSyncStatusLine();
+}
+
+function updateSyncStatusLine() {
+  const el = document.getElementById("syncStatusLine");
+  if (!el) return;
+  if (!isSyncConfigured()) { el.textContent = "Not configured."; return; }
+  const gistId = localStorage.getItem(SYNC_GIST_KEY);
+  const ago = syncRuntime.lastSyncedAt ? humanAgo(syncRuntime.lastSyncedAt) : "never";
+  const statusMap = {
+    off: "Off", syncing: "Syncing…", ok: "Synced " + ago, auth: "Auth failed — token cleared", error: "Last attempt failed",
+  };
+  el.textContent = `${statusMap[syncRuntime.status] || ago}. Gist: ${gistId ? gistId.slice(0, 8) + "…" : "(none yet)"}`;
+}
+function humanAgo(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.round(s / 60) + "m ago";
+  if (s < 86400) return Math.round(s / 3600) + "h ago";
+  return Math.round(s / 86400) + "d ago";
+}
+
+document.getElementById("saveTokenBtn").addEventListener("click", async () => {
+  const raw = document.getElementById("tokenInput").value.trim();
+  if (!raw || raw.startsWith("•")) { alert("Paste a fresh token."); return; }
+  localStorage.setItem(SYNC_TOKEN_KEY, raw);
+  document.getElementById("tokenInput").value = "••••••••••••••••";
+  setSyncStatus("syncing");
+  await syncOnce();
+});
+document.getElementById("syncNowBtn").addEventListener("click", () => {
+  if (!isSyncConfigured()) { alert("Save a token first."); return; }
+  syncRuntime.lastPullAt = 0;
+  syncOnce();
+});
+document.getElementById("disconnectBtn").addEventListener("click", () => {
+  if (!confirm("Disconnect sync on this device?\n\nYour ticks stay here. The token and gist link are removed. Other devices keep syncing.")) return;
+  localStorage.removeItem(SYNC_TOKEN_KEY);
+  localStorage.removeItem(SYNC_GIST_KEY);
+  document.getElementById("tokenInput").value = "";
+  setSyncStatus("off");
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") maybePullOnFocus();
+});
+window.addEventListener("focus", maybePullOnFocus);
+
+// ====================== Boot ======================
 render();
+if (isSyncConfigured()) {
+  setSyncStatus("syncing");
+  syncOnce();
+} else {
+  setSyncStatus("off");
+}
 </script>
 </body>
 </html>
