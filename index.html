@@ -248,7 +248,7 @@
     <h4>☁ Sync (GitHub Gist)</h4>
     <p class="sync-status" id="syncStatusLine">Not configured.</p>
     <label for="tokenInput">Personal access token (fine-grained, "Gists: read and write")</label>
-    <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" spellcheck="false"/>
+    <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" inputmode="text"/>
     <p class="helper">Create one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">github.com/settings/personal-access-tokens/new</a>. Account permissions → <b>Gists: Read and write</b>. Repository access: <b>Public Repositories</b> is fine. The token is stored only in this browser's localStorage. Anyone with this device can use it — keep it scoped to gists only.</p>
     <div class="row">
       <button id="syncNowBtn">Sync now</button>
@@ -777,7 +777,7 @@ async function syncOnce() {
       setSyncStatus("ok");
     } catch (e) {
       if (e instanceof AuthError) {
-        localStorage.removeItem(SYNC_TOKEN_KEY);
+        // Don't wipe the token automatically — user clears it via Disconnect.
         setSyncStatus("auth");
       } else {
         console.error("sync failed", e);
@@ -827,13 +827,17 @@ function setSyncStatus(status) {
 function updateSyncStatusLine() {
   const el = document.getElementById("syncStatusLine");
   if (!el) return;
-  if (!isSyncConfigured()) { el.textContent = "Not configured."; return; }
+  if (!isSyncConfigured()) { el.textContent = "Not configured. Paste a token and tap Save."; return; }
   const gistId = localStorage.getItem(SYNC_GIST_KEY);
   const ago = syncRuntime.lastSyncedAt ? humanAgo(syncRuntime.lastSyncedAt) : "never";
   const statusMap = {
-    off: "Off", syncing: "Syncing…", ok: "Synced " + ago, auth: "Auth failed — token cleared", error: "Last attempt failed",
+    off:     "Off",
+    syncing: "Syncing…",
+    ok:      "Synced " + ago,
+    auth:    "Auth failed — token rejected. Disconnect and re-save with a fresh token (Gists: read+write).",
+    error:   "Last attempt failed. Check connection or tap Sync now.",
   };
-  el.textContent = `${statusMap[syncRuntime.status] || ago}. Gist: ${gistId ? gistId.slice(0, 8) + "…" : "(none yet)"}`;
+  el.textContent = `${statusMap[syncRuntime.status] || ago} · Gist: ${gistId ? gistId.slice(0, 8) + "…" : "(none yet)"}`;
 }
 function humanAgo(ts) {
   const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
@@ -844,11 +848,41 @@ function humanAgo(ts) {
 }
 
 document.getElementById("saveTokenBtn").addEventListener("click", async () => {
-  const raw = document.getElementById("tokenInput").value.trim();
+  const rawField = document.getElementById("tokenInput");
+  const raw = rawField.value.replace(/\s+/g, "");
   if (!raw || raw.startsWith("•")) { alert("Paste a fresh token."); return; }
-  localStorage.setItem(SYNC_TOKEN_KEY, raw);
-  document.getElementById("tokenInput").value = "••••••••••••••••";
+  if (!/^(github_pat_|ghp_|gho_|ghs_|ghu_)/.test(raw)) {
+    if (!confirm("This doesn't look like a GitHub token (expected to start with 'github_pat_' for fine-grained tokens). Save anyway?")) return;
+  }
   setSyncStatus("syncing");
+  // Pre-validate: test token against /gists before storing it permanently.
+  let resp;
+  try {
+    resp = await fetch("https://api.github.com/gists?per_page=1", {
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + raw,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+  } catch (e) {
+    setSyncStatus(isSyncConfigured() ? "error" : "off");
+    alert("Could not reach GitHub: " + (e && e.message ? e.message : e) + "\n\nCheck your connection and try again.");
+    return;
+  }
+  if (resp.status === 401 || resp.status === 403) {
+    setSyncStatus(isSyncConfigured() ? "auth" : "off");
+    alert("Token rejected by GitHub (HTTP " + resp.status + ").\n\nMake sure your fine-grained token has 'Gists: Read and write' under Account permissions, and that it hasn't expired or been revoked.\n\nThe token was NOT saved.");
+    return;
+  }
+  if (!resp.ok) {
+    setSyncStatus(isSyncConfigured() ? "error" : "off");
+    alert("GitHub returned HTTP " + resp.status + ". The token was NOT saved. Try again later.");
+    return;
+  }
+  // Token is valid — persist and run a full sync.
+  localStorage.setItem(SYNC_TOKEN_KEY, raw);
+  rawField.value = "••••••••••••••••";
   await syncOnce();
 });
 document.getElementById("syncNowBtn").addEventListener("click", () => {
